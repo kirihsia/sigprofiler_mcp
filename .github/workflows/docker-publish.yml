@@ -23,4 +23,4 @@ jobs:
         with:
           context: .
           push: true
-          tags: kirihsia/sigprofiler-mcp-server:latest
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/sigprofiler-mcp-server:latest
