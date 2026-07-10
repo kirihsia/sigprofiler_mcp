@@ -12,8 +12,10 @@ COPY . .
 # pip will automatically skip downloading torch and only install the remaining packages.
 RUN pip install --no-cache-dir .
 
-# CRITICAL: Disable Python's output buffering for MCP stdio communication
+# CRITICAL: Disable Python's output buffering
 ENV PYTHONUNBUFFERED=1
+
+ENV PYTHONPATH=/app
 
 # Run the entry point script
 CMD ["sigprofiler-mcp"]
