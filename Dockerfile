@@ -18,4 +18,4 @@ ENV PYTHONUNBUFFERED=1
 ENV PYTHONPATH=/app
 
 # Run the entry point script
-CMD ["sigprofiler-mcp"]
+CMD ["python", "-m", "sigprofiler_mcp.server"]
