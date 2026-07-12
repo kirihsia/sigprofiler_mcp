@@ -21,6 +21,9 @@ from mcp.server.fastmcp import FastMCP
 
 mcp = FastMCP("sigprofiler")
 
+
+os.environ['SIGPROFILER_MATRIX_GENERATOR_REFERENCES'] = '/references'
+
 # SigProfiler tools print progress to stdout rather than raising on most
 # recoverable issues, so we capture it and return a tail of it to the caller.
 _LOG_TAIL_LINES = 40
@@ -74,6 +77,8 @@ def _is_genome_installed(genome: str) -> bool:
 def install_reference_genome(genome: str = "GRCh37") -> dict:
     """Download and install a reference genome used by SigProfilerMatrixGenerator.
 
+    
+
     This is a one-time setup step (several GB download) that must complete
     before generate_matrix can be used with that genome.
 
@@ -81,6 +86,11 @@ def install_reference_genome(genome: str = "GRCh37") -> dict:
         genome: Which genome build to install. One of: GRCh37, GRCh38, mm9,
             mm10, mm39, rn6, rn7, c_elegans, dog, ebv, yeast.
     """
+
+
+
+
+
     if genome not in _SUPPORTED_GENOMES:
         raise ValueError(
             f"Unknown genome {genome!r}. Supported genomes: "
