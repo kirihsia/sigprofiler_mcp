@@ -108,6 +108,15 @@ def install_reference_genome(genome: str = "GRCh37") -> dict:
         }
 
     from SigProfilerMatrixGenerator import install as genInstall
+    from pathlib import Path
+
+    if hasattr(genInstall, 'reference_dir'):
+        genInstall.reference_dir.path = Path('/')
+    else:
+        print("Warning: reference_dir not found in genInstall. Monkey patch may have failed.")
+
+
+
 
     buf = io.StringIO()
     with _local_cwd(), contextlib.redirect_stdout(buf):
