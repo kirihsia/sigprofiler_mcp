@@ -22,7 +22,7 @@ from mcp.server.fastmcp import FastMCP
 mcp = FastMCP("sigprofiler")
 
 
-os.environ['SIGPROFILER_MATRIX_GENERATOR_REFERENCES'] = '/references'
+os.environ['SIGPROFILERMATRIXGENERATOR_VOLUME'] = '/references'
 
 # SigProfiler tools print progress to stdout rather than raising on most
 # recoverable issues, so we capture it and return a tail of it to the caller.
@@ -87,10 +87,6 @@ def install_reference_genome(genome: str = "GRCh37") -> dict:
             mm10, mm39, rn6, rn7, c_elegans, dog, ebv, yeast.
     """
 
-
-
-
-
     if genome not in _SUPPORTED_GENOMES:
         raise ValueError(
             f"Unknown genome {genome!r}. Supported genomes: "
@@ -106,28 +102,33 @@ def install_reference_genome(genome: str = "GRCh37") -> dict:
                 "install_reference_genome again for this genome."
             ),
         }
+
+
+
+
+
+
     from SigProfilerMatrixGenerator.scripts.ref_install import ReferenceDir
     from pathlib import Path
 
-    _original_init = ReferenceDir.__init__
+    _original_path_prop = getattr(ReferenceDir, 'path', None)
 
-    def _patched_init(self, *args, **kwargs):
-        _original_init(self, *args, **kwargs)
-        self.path = Path('/')
-
-    ReferenceDir.__init__ = _patched_init
+    ReferenceDir.path = property(lambda self: Path('/references'))
 
 
     from SigProfilerMatrixGenerator import install as genInstall
-
-
+    import io
+    import contextlib
 
     buf = io.StringIO()
+
+
     with _local_cwd(), contextlib.redirect_stdout(buf):
 
-        genInstall.install(genome, bash=True, volume='/references')
+        genInstall.install(genome, bash=True)
     
-    ReferenceDir.__init__ = _original_init
+    if _original_path_prop:
+        ReferenceDir.path = _original_path_prop
 
     return {
         "genome": genome,
