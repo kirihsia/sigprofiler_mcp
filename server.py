@@ -123,12 +123,16 @@ def install_reference_genome(genome: str = "GRCh37") -> dict:
     buf = io.StringIO()
 
 
-    with _local_cwd(), contextlib.redirect_stdout(buf):
+    original_cwd = os.getcwd()
+    os.chdir('/references')
 
-        genInstall.install(genome, bash=True)
-    
-    if _original_path_prop:
-        ReferenceDir.path = _original_path_prop
+    try:
+        with contextlib.redirect_stdout(buf):
+            genInstall.install(genome, bash=True)
+    finally:
+        os.chdir(original_cwd)
+        if _original_path_prop:
+            ReferenceDir.path = _original_path_prop
 
     return {
         "genome": genome,
