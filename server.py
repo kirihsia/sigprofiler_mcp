@@ -106,21 +106,29 @@ def install_reference_genome(genome: str = "GRCh37") -> dict:
                 "install_reference_genome again for this genome."
             ),
         }
-
-    from SigProfilerMatrixGenerator import install as genInstall
+    from SigProfilerMatrixGenerator.scripts.ref_install import ReferenceDir
     from pathlib import Path
 
-    if hasattr(genInstall, 'reference_dir'):
-        genInstall.reference_dir.path = Path('/')
-    else:
-        print("Warning: reference_dir not found in genInstall. Monkey patch may have failed.")
+    _original_init = ReferenceDir.__init__
 
+    def _patched_init(self, *args, **kwargs):
+        _original_init(self, *args, **kwargs)
+        self.path = Path('/')
+
+    ReferenceDir.__init__ = _patched_init
+
+
+    from SigProfilerMatrixGenerator import install as genInstall
 
 
 
     buf = io.StringIO()
     with _local_cwd(), contextlib.redirect_stdout(buf):
-        genInstall.install(genome, bash=True)
+
+        genInstall.install(genome, bash=True, volume='/references')
+    
+    ReferenceDir.__init__ = _original_init
+
     return {
         "genome": genome,
         "already_installed": False,
