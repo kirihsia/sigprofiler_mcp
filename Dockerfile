@@ -17,5 +17,7 @@ ENV PYTHONUNBUFFERED=1
 
 ENV PYTHONPATH=/app
 
+ENV USE_GPU=True
+
 # Run the entry point script
 CMD ["python", "server.py"]
