@@ -8,7 +8,9 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt .
+# Copy the entire project into the container
+COPY . .
+
 RUN pip install --no-cache-dir .
 
 # CRITICAL: Disable Python's output buffering
@@ -17,9 +19,6 @@ ENV PYTHONPATH=/app
 
 # Explicitly tell the Python script to disable GPU
 ENV USE_GPU=False
-
-# Copy the entire project into the container
-COPY . .
 
 # Run the entry point script
 CMD ["python", "server.py"]
