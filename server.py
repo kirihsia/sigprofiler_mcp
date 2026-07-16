@@ -258,6 +258,12 @@ def extract_signatures(
         cpu: Number of CPUs to use, -1 for all available.
     """
     from SigProfilerExtractor import sigpro as sig
+    import os
+
+    use_gpu_env = os.environ.get("USE_GPU", "True").strip().lower()
+    should_use_gpu = use_gpu_env in ("true", "1", "yes")
+
+
 
     buf = io.StringIO()
     with contextlib.redirect_stdout(buf):
@@ -270,6 +276,7 @@ def extract_signatures(
             maximum_signatures=maximum_signatures,
             nmf_replicates=nmf_replicates,
             cpu=cpu,
+            gpu=should_use_gpu, # 2. Pass the dynamic boolean here
         )
     return {
         "output_directory": str(Path(output).resolve()),
