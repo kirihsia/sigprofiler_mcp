@@ -10,7 +10,8 @@ COPY . .
 # Install the project and its other dependencies.
 # Since 'torch' is already pre-installed in this base image, 
 # pip will automatically skip downloading torch and only install the remaining packages.
-RUN pip install --no-cache-dir .
+RUN pip install --no-cache-dir "numpy<2.0" && \
+    pip install --no-cache-dir .
 
 # CRITICAL: Disable Python's output buffering
 ENV PYTHONUNBUFFERED=1
