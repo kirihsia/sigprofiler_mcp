@@ -14,6 +14,9 @@ dependencies = [
     "SigProfilerAssignment>=1.1.1",
     "SigProfilerExtractor>=1.2.6",
     "sigProfilerPlotting>=1.4.2",
+    "streamlit>=1.30.0",
+    "plotly>=5.18.0",
+    "pandas>=2.0.0",
 ]
 
 [project.scripts]

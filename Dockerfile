@@ -13,6 +13,8 @@ COPY . .
 RUN pip install --no-cache-dir "numpy<2.0" && \
     pip install --no-cache-dir .
 
+RUN chmod +x start.sh
+
 # CRITICAL: Disable Python's output buffering
 ENV PYTHONUNBUFFERED=1
 
@@ -20,5 +22,8 @@ ENV PYTHONPATH=/app
 
 ENV USE_GPU=True
 
-# Run the entry point script
-CMD ["python", "server.py"]
+# Expose the Streamlit viewer port
+EXPOSE 8501
+
+# Run the unified startup script (Streamlit viewer + MCP server)
+CMD ["./start.sh"]

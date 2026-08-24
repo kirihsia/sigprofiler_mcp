@@ -40,6 +40,18 @@ def _resolve_dir(path: str, must_exist: bool = True) -> Path:
     return resolved
 
 
+# Root directory the results viewer (viewer.py) watches. Tools that don't
+# receive an explicit output path fall back to a named subdirectory here so
+# results stay organized by sample/project and are discoverable by the viewer.
+_OUTPUT_ROOT = Path(os.environ.get("OUTPUT_DIR", "mcp_outputs"))
+
+
+def _default_output_dir(name: str) -> str:
+    path = _OUTPUT_ROOT / name
+    path.mkdir(parents=True, exist_ok=True)
+    return str(path)
+
+
 # SigProfilerMatrixGenerator's installer writes a "logs" dir relative to the
 # process's current working directory, which is often a read-only network
 # mount when this server is launched from one. Run installs from a local dir.
@@ -158,13 +170,15 @@ def generate_matrix(
             Must already be installed via install_reference_genome.
         exome: Restrict matrix generation to the exome.
         output_dir: Where to write the "output" directory. Defaults to
-            inside input_dir.
+            OUTPUT_DIR/<project>.
     """
     from SigProfilerMatrixGenerator.scripts import (
         SigProfilerMatrixGeneratorFunc as matGen,
     )
 
     input_path = _resolve_dir(input_dir)
+    if output_dir is None:
+        output_dir = _default_output_dir(project)
 
     buf = io.StringIO()
     with contextlib.redirect_stdout(buf):
@@ -177,7 +191,7 @@ def generate_matrix(
         )
 
     matrix_types = sorted(matrices.keys()) if isinstance(matrices, dict) else []
-    resolved_output = Path(output_dir).resolve() if output_dir else input_path / "output"
+    resolved_output = Path(output_dir).resolve()
     return {
         "matrix_types_generated": matrix_types,
         "output_directory": str(resolved_output),
@@ -188,7 +202,7 @@ def generate_matrix(
 @mcp.tool()
 def assign_signatures(
     samples: str,
-    output: str,
+    output: Optional[str] = None,
     genome_build: str = "GRCh37",
     cosmic_version: float = 3.4,
     signatures: Optional[str] = None,
@@ -201,6 +215,7 @@ def assign_signatures(
         samples: Path to a mutational matrix file (or VCF/MAF directory if
             input_type is not "matrix") to decompose into signatures.
         output: Directory to write results (activities, plots, probabilities).
+            Defaults to OUTPUT_DIR/<samples name>_assign.
         genome_build: Genome build of the samples, e.g. GRCh37, GRCh38.
         cosmic_version: Which COSMIC signature reference set to fit against.
         signatures: Optional path to a custom signatures file. If omitted,
@@ -209,6 +224,9 @@ def assign_signatures(
         exome: Whether the samples are exome-restricted.
     """
     from SigProfilerAssignment import Analyzer as Analyze
+
+    if output is None:
+        output = _default_output_dir(f"{Path(samples).stem}_assign")
 
     buf = io.StringIO()
     with contextlib.redirect_stdout(buf):
@@ -230,7 +248,7 @@ def assign_signatures(
 @mcp.tool()
 def extract_signatures(
     input_data: str,
-    output: str,
+    output: Optional[str] = None,
     input_type: str = "matrix",
     reference_genome: str = "GRCh37",
     minimum_signatures: int = 1,
@@ -249,7 +267,8 @@ def extract_signatures(
     Args:
         input_data: Path to a mutational matrix file, or a directory of
             VCF/MAF files if input_type is not "matrix".
-        output: Directory to write extraction results.
+        output: Directory to write extraction results. Defaults to
+            OUTPUT_DIR/<input_data name>_extract.
         input_type: "matrix", "vcf", or "seg".
         reference_genome: Genome build, e.g. GRCh37, GRCh38.
         minimum_signatures: Smallest number of signatures to try extracting.
@@ -263,7 +282,8 @@ def extract_signatures(
     use_gpu_env = os.environ.get("USE_GPU", "True").strip().lower()
     should_use_gpu = use_gpu_env in ("true", "1", "yes")
 
-
+    if output is None:
+        output = _default_output_dir(f"{Path(input_data).stem}_extract")
 
     buf = io.StringIO()
     with contextlib.redirect_stdout(buf):
@@ -291,9 +311,9 @@ _PLOT_FUNCTIONS_WITHOUT_CONTEXT = {"CNV", "SV"}
 @mcp.tool()
 def plot_signatures(
     matrix_path: str,
-    output_path: str,
     project: str,
     mutation_type: str,
+    output_path: Optional[str] = None,
     plot_type: Optional[str] = None,
     percentage: bool = False,
 ) -> dict:
@@ -302,16 +322,20 @@ def plot_signatures(
     Args:
         matrix_path: Path to the matrix file to plot (e.g. output of
             generate_matrix or a signatures file from extract_signatures).
-        output_path: Directory to write the plot PDF into.
         project: Name of the sample set, used in the plot title/filename.
         mutation_type: One of "SBS", "DBS", "ID", "CNV", "SV" -- selects
             which plotting routine to use.
+        output_path: Directory to write the plot PDF into. Defaults to
+            OUTPUT_DIR/<project>_plots.
         plot_type: Required for SBS/DBS/ID -- the context size of the
             matrix, e.g. "96", "288", "384", "1536" for SBS. Ignored for
             CNV/SV.
         percentage: Show the y-axis as a percentage instead of raw counts.
     """
     import sigProfilerPlotting as sigPlt
+
+    if output_path is None:
+        output_path = _default_output_dir(f"{project}_plots")
 
     mutation_type = mutation_type.upper()
     buf = io.StringIO()
