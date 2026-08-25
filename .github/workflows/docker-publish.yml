@@ -1,13 +1,12 @@
-name: Build and Push Docker Image
+name: Build and Push Docker Images
 
 on:
   push:
     branches: [ "main" ]
 
 jobs:
-  build:
+  build-gpu:
     runs-on: ubuntu-latest
-
     steps:
       - name: Check out the repo
         uses: actions/checkout@v4
@@ -18,9 +17,30 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build and push Docker image
+      - name: Build and push GPU Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
+          file: ./Dockerfile  
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/sigprofiler-mcp-server:gpu
+
+  build-cpu:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push CPU Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile.mac  
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/sigprofiler-mcp-server:cpu
