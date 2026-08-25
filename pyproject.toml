@@ -9,7 +9,7 @@ description = "MCP server exposing SigProfilerMatrixGenerator, SigProfilerAssign
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-    "mcp[cli]>=1.28.1",
+    "mcp[cli]>=1.28.1,<2",
     "SigProfilerMatrixGenerator>=1.3.6",
     "SigProfilerAssignment>=1.1.1",
     "SigProfilerExtractor>=1.2.6",
