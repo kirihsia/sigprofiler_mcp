@@ -26,7 +26,7 @@ st.divider()
 def get_signature_files(directory):
     if not os.path.exists(directory):
         return []
-    files = glob.glob(os.path.join(directory, "**", "*signatures*.txt"), recursive=True) + \
+    files = glob.glob(os.path.join(directory, "**", "*[Ss]ignatures*.txt"), recursive=True) + \
             glob.glob(os.path.join(directory, "*.txt"))
     return sorted(list(set(files)), key=os.path.getmtime, reverse=True)
 
