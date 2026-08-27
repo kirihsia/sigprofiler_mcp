@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Define the local output directory for the container volume mount
-export OUTPUT_DIR="/app/mcp_outputs"
+export OUTPUT_DIR="${OUTPUT_DIR:-/app/mcp_outputs}"
 mkdir -p $OUTPUT_DIR
 
 # 1. Start the Streamlit Web Viewer in the background
