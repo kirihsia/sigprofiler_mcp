@@ -359,6 +359,23 @@ def plot_signatures(
     }
 
 
+@mcp.tool()
+def get_viewer_url() -> dict:
+    """Get the URL of the SigProfiler results web viewer.
+
+    The viewer runs in a separate, persistent container (started
+    independently of this MCP server) so its address stays fixed
+    regardless of how many MCP connections are active.
+    """
+    return {
+        "url": "http://localhost:8501",
+        "note": (
+            "Shows plots for signature files under OUTPUT_DIR. "
+            "Requires the standalone sigprofiler-viewer container to be running."
+        ),
+    }
+
+
 def main() -> None:
     mcp.run(transport="stdio")
 
