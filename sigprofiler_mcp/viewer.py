@@ -10,6 +10,18 @@ st.set_page_config(page_title="SigProfiler Plot Gallery", layout="wide")
 # Fetch output directory from environment, default to /app/mcp_outputs
 OUTPUT_DIR = os.getenv("OUTPUT_DIR", "/app/mcp_outputs")
 
+# The container-internal OUTPUT_DIR is usually a bind mount of a real
+# directory on the host. HOST_DATA_DIR (if set) is that host-side path, used
+# only to translate container paths into ones the user actually recognizes.
+HOST_DATA_DIR = os.getenv("HOST_DATA_DIR")
+
+
+def to_host_path(path):
+    if HOST_DATA_DIR and path.startswith(OUTPUT_DIR):
+        return HOST_DATA_DIR + path[len(OUTPUT_DIR):]
+    return path
+
+
 st.markdown("""
     <style>
     .main-header { font-size: 26px; font-weight: bold; margin-bottom: 2px; }
@@ -20,15 +32,17 @@ st.markdown("""
 
 st.markdown('<div class="main-header">Mutational Signatures Plot Gallery</div>', unsafe_allow_html=True)
 st.markdown('<div class="sub-header">Browse and view your extraction results in real-time</div>', unsafe_allow_html=True)
-st.markdown(f'Plot directory: <span class="dir-badge">{OUTPUT_DIR}</span>', unsafe_allow_html=True)
+st.markdown(f'Plot directory: <span class="dir-badge">{to_host_path(OUTPUT_DIR)}</span>', unsafe_allow_html=True)
 st.divider()
 
 def get_signature_files(directory):
     if not os.path.exists(directory):
         return []
-    files = glob.glob(os.path.join(directory, "**", "*[Ss]ignatures*.txt"), recursive=True) + \
-            glob.glob(os.path.join(directory, "*.txt"))
-    return sorted(list(set(files)), key=os.path.getmtime, reverse=True)
+    # Only the signature matrices themselves are plottable -- exclude
+    # sibling "_stats.txt" / "_SEM_Error.txt" files that also contain
+    # "Signatures" in their name but aren't matrices.
+    files = glob.glob(os.path.join(directory, "**", "*[Ss]ignatures.txt"), recursive=True)
+    return sorted(set(files), key=os.path.getmtime, reverse=True)
 
 all_files = get_signature_files(OUTPUT_DIR)
 
@@ -56,7 +70,8 @@ if selected_file and os.path.exists(selected_file):
         sig_cols = [c for c in df.columns if c not in ("MutationType", "Subs", "Base5", "Base3", "_order")]
         n_sigs = len(sig_cols)
 
-        st.subheader(f"Solution: N = {n_sigs} Signatures ({os.path.basename(selected_file)})")
+        st.subheader(f"Solution: N = {n_sigs} Signatures")
+        st.caption(f"Source file: {to_host_path(selected_file)}")
 
         cols = st.columns(2)
         for idx, sig_name in enumerate(sig_cols):
