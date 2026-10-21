@@ -1,0 +1,13 @@
+.git
+.github
+.venv
+.DS_Store
+**/.DS_Store
+**/__pycache__
+*.pyc
+mcp_outputs
+project7
+plotcode
+plotcode.zip
+try_new_feature
+Claude outputs

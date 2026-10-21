@@ -17,7 +17,12 @@ dependencies = [
     "streamlit>=1.30.0",
     "plotly>=5.18.0",
     "pandas>=2.0.0",
+    "kaleido>=1.0.0",
+    "pypdf>=4.0.0",
 ]
 
 [project.scripts]
 sigprofiler-mcp = "sigprofiler_mcp.server:main"
+
+[tool.setuptools.packages.find]
+include = ["sigprofiler_mcp*"]

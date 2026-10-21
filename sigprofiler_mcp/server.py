@@ -359,6 +359,264 @@ def plot_signatures(
     }
 
 
+_SBS4608_PAGE_TEMPLATE = """<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>{title}</title>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
+<style>
+body {{ font-family: Arial, sans-serif; margin: 0; padding: 20px 24px 60px; background: #fafafa; line-height: 1.5; }}
+h1 {{ font-size: 1.3rem; }}
+h2 {{ border-top: 2px solid #ddd; padding-top: 20px; margin-top: 50px; font-size: 1.05rem; }}
+nav.toc {{
+  position: sticky; top: 0; z-index: 10;
+  background: #fff; border: 1px solid #ddd; border-radius: 6px;
+  padding: 10px 14px; margin: 16px 0 24px; display: flex; gap: 10px; flex-wrap: wrap;
+  align-items: center;
+}}
+nav.toc span.label {{ font-weight: 600; color: #555; font-size: 0.85rem; margin-right: 4px; }}
+nav.toc a {{
+  text-decoration: none; color: #1a4fa0; font-size: 0.85rem;
+  padding: 4px 10px; border: 1px solid #cddaf0; border-radius: 999px; background: #f2f6ff;
+}}
+nav.toc a:hover {{ background: #e2ecff; }}
+.legend {{
+  display: flex; gap: 14px; flex-wrap: wrap; align-items: center;
+  background: #fff; border: 1px solid #ddd; border-radius: 6px; padding: 10px 14px; margin-bottom: 24px;
+}}
+.legend .swatch {{ display: inline-flex; align-items: center; gap: 6px; font-size: 0.85rem; color: #333; }}
+.legend .dot {{ width: 12px; height: 12px; border-radius: 3px; display: inline-block; border: 1px solid rgba(0,0,0,0.15); }}
+.plot {{ background: #fff; border: 1px solid #ddd; border-radius: 6px; padding: 8px; }}
+</style>
+</head>
+<body>
+<h1>{title}</h1>
+<nav class="toc">
+<span class="label">Jump to signature:</span>
+{toc_links}
+</nav>
+<div class="legend">
+<span class="label" style="margin-right:0;">Substitution type colors:</span>
+{legend_swatches}
+</div>
+{sections}
+<script>
+{plot_calls}
+</script>
+</body>
+</html>
+"""
+
+
+@mcp.tool()
+def plot_signatures_interactive(
+    matrix_path: str,
+    project: str,
+    output_path: Optional[str] = None,
+    signatures: Optional[list] = None,
+    include_detailed_heatmaps: bool = True,
+) -> dict:
+    """Build an interactive multi-panel HTML plot for SBS-4608 (pentanucleotide
+    + strand) mutational signatures.
+
+    Unlike plot_signatures (a static PDF of just the bar profile), this
+    combines, per signature, in one Plotly figure: the 96-context bar
+    profile, "front"/"back" pentanucleotide detail heatmaps, a total heatmap
+    with Transcribed/Untranscribed/intergenic hover proportions, and stacked
+    Transcribed-vs-Untranscribed + Genic-vs-Intergenic strand-bias bars.
+
+    Args:
+        matrix_path: Path to a *_Signatures.txt (or matrix) file whose
+            mutationType rows are strand-tagged pentanucleotide contexts,
+            e.g. "T:AA[C>A]AA" (4608 rows per signature: 6 substitutions x
+            16 x 16 flanking-dinucleotide combos x 3 strand tags T/U/N).
+            Not the same as a plain 96/288/384/1536-context matrix -- use
+            plot_signatures for those.
+        project: Name for this run, used in the output filename and page title.
+        output_path: Directory to write the HTML into. Defaults to
+            OUTPUT_DIR/<project>_plots.
+        signatures: Which signature columns to plot. Defaults to every
+            column in the file other than MutationType.
+        include_detailed_heatmaps: Include the front/back pentanucleotide
+            detail heatmaps (in addition to the total heatmap).
+    """
+    import json
+    from sigprofiler_mcp.sbs4608.sbs4608_data import SBS4608Data, load_raw4608
+    from sigprofiler_mcp.sbs4608.sbs4608_plot_config import SBS4608PlotConfig, SBS_COLOR
+    from sigprofiler_mcp.sbs4608.sbs4608_plot_builder import SBS4608PlotBuilder
+
+    matrix_file = Path(matrix_path).expanduser().resolve()
+    if not matrix_file.is_file():
+        raise ValueError(f"matrix_path does not exist: {matrix_file}")
+
+    with open(matrix_file) as f:
+        header = f.readline().rstrip("\n").split("\t")
+    available_columns = [c for c in header if c != "MutationType"]
+    sig_columns = signatures or available_columns
+    missing = [s for s in sig_columns if s not in available_columns]
+    if missing:
+        raise ValueError(
+            f"Signature(s) not found in {matrix_file}: {missing}. "
+            f"Available columns: {available_columns}"
+        )
+
+    if output_path is None:
+        output_path = _default_output_dir(f"{project}_plots")
+    out_dir = Path(output_path)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    out_file = out_dir / f"{project}_interactive.html"
+
+    sections = []
+    plot_calls = []
+    for sig in sig_columns:
+        raw4608 = load_raw4608(str(matrix_file), sig)
+        data = SBS4608Data(raw4608, sig, main_plot_type="default")
+        config = SBS4608PlotConfig(
+            include_detailed_heatmaps=include_detailed_heatmaps, main_plot_type="default"
+        )
+        builder = SBS4608PlotBuilder(data, config)
+        fig = builder.build()
+        div_id = f"plot-{sig}"
+        sections.append(f'<h2 id="{sig}">{sig}</h2>\n<div class="plot" id="{div_id}"></div>')
+        plot_calls.append(
+            f'Plotly.newPlot("{div_id}", {json.dumps(fig["traces"])}, '
+            f'{json.dumps(fig["layout"])}, {json.dumps(fig["config"])});'
+        )
+
+    legend_swatches = "\n".join(
+        f'<span class="swatch"><span class="dot" style="background:{color};"></span>{mutation}</span>'
+        for mutation, color in SBS_COLOR.items()
+    )
+    toc_links = "\n".join(f'<a href="#{sig}">{sig}</a>' for sig in sig_columns)
+    title = f"{project} -- interactive SBS-4608 signature plots"
+
+    html = _SBS4608_PAGE_TEMPLATE.format(
+        title=title,
+        toc_links=toc_links,
+        legend_swatches=legend_swatches,
+        sections="\n".join(sections),
+        plot_calls="\n".join(plot_calls),
+    )
+    out_file.write_text(html, encoding="utf-8")
+
+    return {
+        "output_file": str(out_file.resolve()),
+        "signatures_plotted": sig_columns,
+    }
+
+
+@mcp.tool()
+def plot_signatures_static(
+    matrix_path: str,
+    project: str,
+    output_path: Optional[str] = None,
+    signatures: Optional[list] = None,
+    include_detailed_heatmaps: bool = True,
+) -> dict:
+    """Build a static (non-interactive) PDF version of the SBS-4608 plot.
+
+    Same multi-panel figure as plot_signatures_interactive -- per signature,
+    in one figure: the 96-context bar profile, "front"/"back" pentanucleotide
+    detail heatmaps, a total heatmap, and stacked Transcribed-vs-Untranscribed
+    + Genic-vs-Intergenic strand-bias bars -- but rendered as a static PDF
+    (one page per signature) instead of an interactive HTML page. Use this
+    when the plot needs to go into a manuscript, a print handout, or anywhere
+    an HTML file with embedded JavaScript isn't practical; use
+    plot_signatures_interactive when the viewer needs hover tooltips or the
+    Main Plot Type / plot-options controls.
+
+    Requires the `kaleido` package for static rendering, plus a local
+    Chrome/Chromium install. kaleido finds an existing Chrome/Chromium
+    automatically on most machines; if it can't, run `plotly_get_chrome`
+    once (works on macOS, Windows, and Linux x86-64).
+
+    Args:
+        matrix_path: Path to a *_Signatures.txt (or matrix) file whose
+            mutationType rows are strand-tagged pentanucleotide contexts,
+            e.g. "T:AA[C>A]AA" (4608 rows per signature). Same format as
+            plot_signatures_interactive expects.
+        project: Name for this run, used in the output filename and the
+            per-page signature title.
+        output_path: Directory to write the PDF into. Defaults to
+            OUTPUT_DIR/<project>_plots.
+        signatures: Which signature columns to plot. Defaults to every
+            column in the file other than MutationType.
+        include_detailed_heatmaps: Include the front/back pentanucleotide
+            detail heatmaps (in addition to the total heatmap).
+    """
+    import tempfile
+
+    import kaleido
+    import plotly.graph_objects as go
+    from pypdf import PdfWriter
+
+    from sigprofiler_mcp.sbs4608.sbs4608_data import SBS4608Data, load_raw4608
+    from sigprofiler_mcp.sbs4608.sbs4608_plot_builder import SBS4608PlotBuilder
+    from sigprofiler_mcp.sbs4608.sbs4608_plot_config import SBS4608PlotConfig
+
+    matrix_file = Path(matrix_path).expanduser().resolve()
+    if not matrix_file.is_file():
+        raise ValueError(f"matrix_path does not exist: {matrix_file}")
+
+    with open(matrix_file) as f:
+        header = f.readline().rstrip("\n").split("\t")
+    available_columns = [c for c in header if c != "MutationType"]
+    sig_columns = signatures or available_columns
+    missing = [s for s in sig_columns if s not in available_columns]
+    if missing:
+        raise ValueError(
+            f"Signature(s) not found in {matrix_file}: {missing}. "
+            f"Available columns: {available_columns}"
+        )
+
+    if output_path is None:
+        output_path = _default_output_dir(f"{project}_plots")
+    out_dir = Path(output_path)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    out_file = out_dir / f"{project}.pdf"
+
+    # Plotly.js silently falls back to its schema default ("auto") for an
+    # invalid annotation xanchor/yanchor value, which is how the interactive
+    # HTML path renders fine even though some annotations here use "bottom"/
+    # "top" for xanchor (not a valid enum member). The Python graph_objects
+    # validator used for static rendering is strict, so normalize first --
+    # this reproduces the same fallback the browser already applies, rather
+    # than changing how anything looks.
+    valid_anchors = {"auto", "left", "center", "right"}
+
+    writer = PdfWriter()
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        for sig in sig_columns:
+            raw4608 = load_raw4608(str(matrix_file), sig)
+            data = SBS4608Data(raw4608, sig, main_plot_type="default")
+            config = SBS4608PlotConfig(
+                include_detailed_heatmaps=include_detailed_heatmaps, main_plot_type="default"
+            )
+            builder = SBS4608PlotBuilder(data, config)
+            fig_dict = builder.build()
+
+            layout = dict(fig_dict["layout"])
+            annotations = [dict(a) for a in layout.get("annotations", [])]
+            for ann in annotations:
+                if ann.get("xanchor") not in valid_anchors:
+                    ann["xanchor"] = "auto"
+            layout["annotations"] = annotations
+
+            fig = go.Figure(data=fig_dict["traces"], layout=layout)
+            page_path = Path(tmp_dir) / f"{sig}.pdf"
+            kaleido.write_fig_sync(fig, path=str(page_path))
+            writer.append(str(page_path))
+
+        with open(out_file, "wb") as f:
+            writer.write(f)
+
+    return {
+        "output_file": str(out_file.resolve()),
+        "signatures_plotted": sig_columns,
+    }
+
+
 @mcp.tool()
 def get_viewer_url() -> dict:
     """Get the URL of the SigProfiler results web viewer.
