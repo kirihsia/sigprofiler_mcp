@@ -14,7 +14,8 @@ COPY . .
 # Install CPU-only PyTorch
 RUN pip install --no-cache-dir \
     torch==2.2.1 \
-    --index-url https://download.pytorch.org/whl/cpu
+    --index-url https://download.pytorch.org/whl/cpu \
+    --extra-index-url https://pypi.org/simple
 
 # Install SigMCP and remaining dependencies
 RUN pip install --no-cache-dir .
