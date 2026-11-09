@@ -86,6 +86,41 @@ def _is_genome_installed(genome: str) -> bool:
 
 
 @mcp.tool()
+def check_reference_genome(genome: str = "GRCh37") -> dict:
+    """Check whether a reference genome is installed.
+
+    This tool only checks installation status.
+    It does not download, install, or modify any files.
+
+    Args:
+        genome: Genome build to check. One of: GRCh37, GRCh38, mm9,
+            mm10, mm39, rn6, rn7, c_elegans, dog, ebv, yeast.
+    """
+
+    if genome not in _SUPPORTED_GENOMES:
+        raise ValueError(
+            f"Unknown genome {genome!r}. Supported genomes: "
+            f"{', '.join(sorted(_SUPPORTED_GENOMES))}."
+        )
+
+    installed = _is_genome_installed(genome)
+
+    return {
+        "genome": genome,
+        "installed": installed,
+        "status": "Installed" if installed else "Not installed",
+        "message": (
+            f"{genome} is already installed."
+            if installed
+            else f"{genome} is not installed. "
+                 "Use install_reference_genome if installation is needed."
+        ),
+    }
+
+
+
+
+@mcp.tool()
 def install_reference_genome(genome: str = "GRCh37") -> dict:
     """Download and install a reference genome used by SigProfilerMatrixGenerator.
 
