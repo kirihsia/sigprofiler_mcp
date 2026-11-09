@@ -11,6 +11,12 @@ RUN apt-get update && apt-get install -y \
 # Copy the entire project into the container
 COPY . .
 
+# Install CPU-only PyTorch
+RUN pip install --no-cache-dir \
+    torch==2.2.1 \
+    --index-url https://download.pytorch.org/whl/cpu
+
+# Install SigMCP and remaining dependencies
 RUN pip install --no-cache-dir .
 
 RUN chmod +x start.sh
