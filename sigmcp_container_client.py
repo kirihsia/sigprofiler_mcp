@@ -201,7 +201,7 @@ async def chat_loop(session, ollama_tools, mcp_tools):
 
                         tool_output = extract_tool_result(result)
 
-                        if result.is_error:
+                        if result.isError:
                             tool_output = "MCP tool error: " + tool_output
 
                     except Exception as e:
