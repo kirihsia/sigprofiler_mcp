@@ -23,12 +23,14 @@ OLLAMA_CLIENT = ollama.Client(host=OLLAMA_HOST)
 MAX_TOOL_ROUNDS = 6
 
 SERVER_ENV = os.environ.copy()
-SERVER_ENV.update({
+# Defaults only; values set by the Dockerfile (e.g. USE_GPU=True) win.
+for _key, _value in {
     "OUTPUT_DIR": "/data",
     "HOST_DATA_DIR": "/data",
     "USE_GPU": "False",
     "SIGPROFILERMATRIXGENERATOR_VOLUME": "/references",
-})
+}.items():
+    SERVER_ENV.setdefault(_key, _value)
 
 SERVER_PARAMS = StdioServerParameters(
     command="sigprofiler-mcp",
@@ -256,9 +258,9 @@ async def main():
                 )
 
     except FileNotFoundError:
-    print(
-        "\nError: SigProfiler MCP Server executable was not found. "
-        "Please check that the Server package is installed correctly."
+        print(
+            "\nError: SigProfiler MCP Server executable was not found. "
+            "Please check that the Server package is installed correctly."
         )
 
     except Exception as e:
