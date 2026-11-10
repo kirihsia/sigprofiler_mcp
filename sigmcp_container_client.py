@@ -53,7 +53,7 @@ def convert_mcp_tools(mcp_tools):
             "function": {
                 "name": tool.name,
                 "description": tool.description or "",
-                "parameters": tool.input_schema
+                "parameters": tool.inputSchema
             }
         })
 
