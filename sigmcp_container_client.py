@@ -2,6 +2,7 @@ import asyncio
 import json
 import os
 import ollama
+import traceback
 
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
@@ -264,7 +265,21 @@ async def main():
         )
 
     except Exception as e:
-        print(f"\nClient error: {e}")
+        print("\nClient error:")
+        traceback.print_exception(type(e), e, e.__traceback__)
+
+        # Exception groups (e.g. from anyio TaskGroups) carry .exceptions.
+        # Checked by attribute because BaseExceptionGroup is Python 3.11+
+        # and the images run Python 3.10.
+        sub_exceptions = getattr(e, "exceptions", None)
+        if sub_exceptions:
+            print("\nDetailed sub-exceptions:")
+            for sub_exception in sub_exceptions:
+                traceback.print_exception(
+                    type(sub_exception),
+                    sub_exception,
+                    sub_exception.__traceback__
+                )
 
 
 if __name__ == "__main__":
