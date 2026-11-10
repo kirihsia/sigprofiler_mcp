@@ -1,0 +1,27 @@
+cat > Dockerfile.client <<'EOF'
+# Use the existing SigMCP CPU Server image as the base
+FROM xinxinxia/sigprofiler-mcp-server:cpu
+
+WORKDIR /app
+
+# Install the Ollama Python client
+RUN pip install --no-cache-dir ollama
+
+# Copy the Terminal Client
+COPY sigmcp_container_client.py /app/sigmcp_container_client.py
+
+# Ollama runs natively on the Mac host
+ENV OLLAMA_HOST=http://host.docker.internal:11434
+ENV OLLAMA_MODEL=qwen3:8b
+
+# SigMCP configuration
+ENV OUTPUT_DIR=/data
+ENV HOST_DATA_DIR=/data
+ENV USE_GPU=False
+ENV SIGPROFILERMATRIXGENERATOR_VOLUME=/references
+
+ENV PYTHONUNBUFFERED=1
+
+# Start the Terminal Client
+CMD ["python", "/app/sigmcp_container_client.py"]
+EOF
