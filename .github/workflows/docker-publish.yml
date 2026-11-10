@@ -1,4 +1,4 @@
-
+```yaml
 name: Build and Push Docker Images
 
 on:
@@ -6,7 +6,7 @@ on:
     branches: ["main"]
 
 jobs:
-  build-gpu:
+  build-server-gpu:
     runs-on: ubuntu-latest
     steps:
       - name: Check out the repo
@@ -21,7 +21,7 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build and push GPU Docker image
+      - name: Build and push Server GPU image
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -29,7 +29,7 @@ jobs:
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/sigprofiler-mcp-server:gpu
 
-  build-cpu:
+  build-server-cpu:
     runs-on: ubuntu-latest
     steps:
       - name: Check out the repo
@@ -47,7 +47,7 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build and push CPU Docker image
+      - name: Build and push Server CPU image
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -55,3 +55,54 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/sigprofiler-mcp-server:cpu
+
+  build-client-cpu:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push Client CPU image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile.client.cpu
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/sigprofiler-mcp-client:cpu
+
+  build-client-gpu:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push Client GPU image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile.client.gpu
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/sigprofiler-mcp-client:gpu
+```
